@@ -1,0 +1,1 @@
+cmd_drivers/net/wireless/libra/librasdioif.ko := /home/dolphinor/arm-2009q3/bin/arm-none-eabi-ld -EL -r  -T /home/dolphinor/Gace-K-source/kernel/scripts/module-common.lds --build-id -o drivers/net/wireless/libra/librasdioif.ko drivers/net/wireless/libra/librasdioif.o drivers/net/wireless/libra/librasdioif.mod.o

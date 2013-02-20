@@ -1,0 +1,1 @@
+cmd_drivers/bluetooth/built-in.o :=  /home/dolphinor/arm-2009q3/bin/arm-none-eabi-ld -EL    -r -o drivers/bluetooth/built-in.o drivers/bluetooth/hci_uart.o drivers/bluetooth/bluetooth-power.o drivers/bluetooth/bluesleep.o 

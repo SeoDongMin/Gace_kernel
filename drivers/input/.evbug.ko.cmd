@@ -1,0 +1,1 @@
+cmd_drivers/input/evbug.ko := /home/dolphinor/arm-2009q3/bin/arm-none-eabi-ld -EL -r  -T /home/dolphinor/Gace-K-source/kernel/scripts/module-common.lds --build-id -o drivers/input/evbug.ko drivers/input/evbug.o drivers/input/evbug.mod.o
