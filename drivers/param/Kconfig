@@ -1,0 +1,10 @@
+menu "Samsung Param support"
+menuconfig MSM_PARAM
+	tristate "Samsung Paramter Block system"
+	depends on ARCH_MSM7X27
+	default	m
+	help
+	  Samsung EUROPA Android Phone - Parameter control driver
+	  param.o &  samsung_flash.o
+endmenu
+

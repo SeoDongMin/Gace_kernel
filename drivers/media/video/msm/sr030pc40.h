@@ -1,0 +1,1300 @@
+/*
+ * Driver for sr030pc40 (VGA Camera) from Samsung LSI
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ */
+ 
+
+#ifndef __SR030PC40_H__
+#define __SR030PC40_H__
+
+//#define PCAM_ENABLE_DEBUG
+#ifdef PCAM_ENABLE_DEBUG
+#define CAMDRV_DEBUG(fmt, arg...)  \
+                do{\
+                printk("\n\033[1;37;44m<=PCAM=>%s:%d: " fmt "\033[0m", __FUNCTION__, __LINE__, ##arg);}\
+                while(0)
+#else
+#define CAMDRV_DEBUG(fmt, arg...)  
+#endif
+
+#define MAX_VALUE 0x0A20
+#define MAX_VALUE_FLASH 0x069F//10*1024 / 6.04
+#define AWB_BLUEOFFSET 0x01f4   //0813
+
+#define MOVIEMODE_FLASH 3
+#define FLASHMODE_AUTO	2
+#define FLASHMODE_ON	3
+#define FLASHMODE_OFF	1
+
+
+//	AE parameter
+#define	ERRSCL_AUTO			0x0284
+#define	ERRSCL_NOW			0x0286
+#define	AESCL_AUTO			0x0288
+#define	AESCL_NOW			0x028A
+#define	CAP_HALF_AE_CTRL	0x027D
+#define	CAP_GAINOFFSET		0x0282
+#define	AEINDEADBAND		0x400B
+#define	AEOUTDEADBAND		0x400C
+#define	AE_SPEED_INIT		0x402F
+#define	AE_OFFSETVAL 0x076c          //0813
+
+//	AWB parameter
+#define	RATIO_R_AUTO		0x026A
+#define	RATIO_B_AUTO		0x026C
+#define	RATIO_R_NOW			0x026E
+#define	RATIO_B_NOW			0x0270
+#define	HALF_AWB_CTRL		0x028C
+#define	STB_CONT_SHIFT_R	0x445C
+#define	STB_CONT_SHIFT_B	0x445E
+#define	CONT_SHIFT			0x0097
+
+//	AF parameter
+#define	AF_STATE			0x6D76
+
+//	SENS STS&MODE
+#define	HALF_MOVE_STS	0x0294
+#define	MODESEL			0x0011
+#define	LED_ON			0x0069
+#define	FAST_MODECHG_EN	0x3208
+
+#define	AE_MAXDIFF		5000
+#define	N_RATIO			2	//	luminous ratio of pre flash and fullflash 0:x2, 1:x3, 2:x4, 3:x5, 4:x6
+#define	AWB_TBLMIN		50
+
+
+const unsigned short sr030pc40_VT_init_reg[] =
+{
+0x01f1,
+0x01f3,
+0x01f1,
+
+0x0320,
+0x100c,
+0x0322,
+0x107b,
+
+0x0300,
+0x0baa,
+0x0caa,
+0x0daa,
+0x1195,//94
+0x1204,
+0x2000,
+0x2104,
+0x2200,
+0x2300,
+
+0x4001,
+0x4158,
+0x4200,
+0x4314,
+
+//BLC
+0x802e,
+0x817e,
+0x8290,
+0x8330,
+0x842C,
+0x854b,
+0x8948,
+0x900e,
+0x910f,
+0x923a,
+0x9330,
+0x9820,
+0x9940,
+0xa040,
+0xa844,
+
+
+//Page 2  Las
+0x0302,
+0x1340,
+0x1404,
+0x1a00,
+0x1b08,
+0x2033,
+0x21aa,
+0x22a7,
+0x2332,
+0x3b48,
+0x5021,
+0x52a2,
+0x530a,
+0x5430,
+0x5510,
+0x560c,
+0x590F,
+
+0x60ca,
+0x61db,
+0x62ca,
+0x63da,
+0x64ca,
+0x65da,
+0x72cb,
+0x73d8,
+0x74cb,
+0x75d8,
+0x8002,
+0x81bd,
+0x8224,
+0x833e,
+0x8424,
+0x853e,
+0x9272,
+0x938c,
+0x9472,
+0x958c,
+0xa003,
+0xa1bb,
+0xa4bb,
+0xa503,
+0xa844,
+0xa96a,
+0xaa92,
+0xabb7,
+0xb8c9,
+0xb9d0,
+0xbc20,
+0xbd28,
+0xc0DE,
+0xc1EC,
+0xc2DE,
+0xc3EC,
+0xc4E0,
+0xc5EA,
+0xc6E0,
+0xc7Ea,
+0xc8e1,
+0xc9e8,
+0xcae1,
+0xcbe8,
+0xcce2,
+0xcde7,
+0xcee2,
+0xcfe7,
+0xd0c8,
+0xd1ef,
+
+
+//Page 10
+0x0310,
+0x1001, //YUV ORDER UYVY
+0x1143,
+0x1230,
+0x4080,
+0x4112,//24
+0x4880,
+0x5048,
+       
+0x6001,
+0x6100,
+0x6280,
+0x6380,
+0x6448,
+0x6690,
+0x6736,
+
+
+//LPF
+0x0311,
+0x1026,	//LPF_CTL1 //0x01
+0x1106,	//Test Setting
+0x2000,	//LPF_AUTO_CTL
+0x2160,	//LPF_PGA_TH
+0x230a,	//LPF_TIME_TH
+0x6013,	//ZARA_SIGMA_TH //40->10
+0x6185,
+0x6200,	//ZARA_HLVL_CTL
+0x6300,	//ZARA_LLVL_CTL
+0x6400,	//ZARA_DY_CTL
+
+0x67F0,	//*** Change 100402     //Dark
+0x6804,	//*** Change 100402     //Middle
+0x6904,	//High
+
+//2D
+0x0312,
+0x40cb,	//YC2D_LPF_CTL1
+0x4109,	//YC2D_LPF_CTL2
+0x5018,	//Test Setting
+0x5124,	//Test Setting
+0x701f,	//GBGR_CTL1 //0x1f
+0x7100,	//Test Setting
+0x7200,	//Test Setting
+0x7300,	//Test Setting
+0x7412,	//GBGR_G_UNIT_TH
+0x7512,	//GBGR_RB_UNIT_TH
+0x7620,	//GBGR_EDGE_TH
+0x7780,	//GBGR_HLVL_TH
+0x7888,	//GBGR_HLVL_COMP
+0x7918,	//Test Setting
+0xb07d,   //dpc
+
+//Edge
+0x0313,
+0x1001,	
+0x1189,	
+0x1214,	
+0x1319,	
+0x1408,	//Test Setting
+0x2003,	//SHARP_Negative
+0x2104,	//SHARP_Positive
+0x2325,	//SHARP_DY_CTL
+0x2421,	//40->33
+0x2508,	//SHARP_PGA_TH
+0x2640,	//Test Setting
+0x2700,	//Test Setting
+0x2808,	//Test Setting
+0x2950,	//AG_TH
+0x2ae0,	//region ratio
+0x2b10,	//Test Setting
+0x2c28,	//Test Setting
+0x2d40,	//Test Setting
+0x2e00,	//Test Setting
+0x2f00,	//Test Setting
+0x3011,	//Test Setting
+0x8005,	//SHARP2D_CTL
+0x8107,	//Test Setting
+0x9004,	//SHARP2D_SLOPE
+0x9105,	//SHARP2D_DIFF_CTL
+0x9200,	//SHARP2D_HI_CLIP
+0x9330,	//SHARP2D_DY_CTL
+0x9430,	//Test Setting
+0x9510,	//Test Setting
+
+
+0x0314,
+0x1001,
+0x20c0,//60
+0x2180,
+0x2249,
+0x2338,
+0x2432,
+0x0315,
+0x1003,
+
+0x1453,
+0x164a,
+0x172f,
+
+0x30cb,
+0x3161,
+0x3216,
+0x3323,
+0x34ce,
+0x352b,
+0x3601,
+0x3734,
+0x3875,
+//CMC OFS
+0x4008,
+0x4198,
+0x4210,
+0x439e,
+0x440f,
+0x450f,
+0x4684,
+0x4783,
+0x4807,
+
+0x0316,
+0x3000,
+0x3110,
+0x3225,
+0x333a,
+0x345a,
+0x3575,
+0x368c,
+0x379f,
+0x38b0,
+0x39be,
+0x3acb,
+0x3bde,
+0x3ced,
+0x3df8,
+0x3eff,
+
+
+//Page 17 AE 
+0x0317,
+0xc43c,
+0xc532,
+
+//Page 20 AE 
+0x0320,
+0x100c,
+0x1104,
+       
+0x2001,
+0x2827,
+0x29a1,
+
+0x2af0,
+0x2bf4,
+0x2c2b,
+       
+0x30f8,
+
+0x3b22,
+0x3cde,
+
+0x3922,
+0x3ade,
+0x3b22,
+0x3cde,
+
+0x6095,
+0x683c,
+0x6964,
+0x6A28,
+0x6Bc8,
+
+0x7038,//42
+
+0x7622,
+0x77a2, 
+
+0x7812,
+0x7927,
+0x7a23,
+
+0x7c1d,
+0x7d22,
+
+0x8300, //EXP Normal 30.00 fps 
+0x84c3, 
+0x8550, 
+0x8600, //EXPMin 6000.00 fps
+0x87fa, 
+0x8802, //EXP Max 8.00 fps 
+0x89dc, 
+0x8a6c, 
+0x8B3a, //EXP100 
+0x8C98, 
+0x8D30, //EXP120 
+0x8Ed4, 
+
+0x9103,
+0x923b,
+0x9326,
+
+0x9401,
+0x95b7,
+0x9674,
+
+0x988C,
+0x9923,
+
+0x9c06, //EXP Limit 857.14 fps 
+0x9dd6, 
+0x9e00, //EXP Unit 
+0x9ffa, 
+
+0xb114,
+0xb2f0,//c0
+0xb414,
+0xb538,
+0xb626,
+0xb720,
+0xb81d,
+0xb91b,
+0xba1a,
+0xbb19,
+0xbc19,
+0xbd18,
+
+0xc01a,
+0xc348,
+0xc448,
+
+
+//Page 22 AWB
+0x0322,
+0x10e2,
+0x112e,
+0x2140,
+       
+0x3080,
+0x317f,
+0x3812,
+0x3933,
+0x40f0,
+0x4133,
+0x4233,
+0x43f3,
+0x4455,
+0x4544,
+0x4602,
+       
+0x8045,
+0x8120,
+0x8235,
+
+0x835e,//5a
+0x8420,//2a
+0x855b,//56
+0x8620,
+
+0x874e,
+0x8846,//
+0x8931,//
+0x8a2b,//
+0x8b00,
+0x8d23,//21
+0x8ea2,//71
+
+0x8f61,
+0x905d,
+0x9158,
+0x9253,
+0x934d,
+0x9448,
+0x9540,
+0x9636,
+0x972a,
+0x9827,
+0x9924,
+0x9a22,
+0x9b09,
+       
+0x0322,
+0x10fb,
+
+0x0320,
+0x108c,
+
+0x01f0,
+};
+
+
+//Gopeace LeeSangmin VCALL SETTING
+const unsigned short sr030pc40_init_reg[]=
+{
+0x01f1,
+0x01f3,
+0x01f1,
+
+0x0320,
+0x100c,
+0x0322,
+0x107b,
+
+0x0300,
+0x0baa,
+0x0caa,
+0x0daa,
+0x1000,
+0x1191,
+0x1204,
+0x2000,
+0x2104,
+0x2200,
+0x2300,
+
+0x0300, //Page 0
+0x4001, //Hblank 344
+0x4158, 
+0x4201, //Vblank 300
+0x432c, 
+
+//BLC
+0x802e,
+0x817e,
+0x8290,
+0x8330,
+0x842C,//
+0x854b,//
+0x8948,//BLC hold
+0x900c, //BLC_TIME_TH_ON
+0x910c, //BLC_TIME_TH_OFF 
+0x9278, //BLC_AG_TH_ON
+0x9370, //BLC_AG_TH_OFF
+0x9820,
+0x9940, //Out BLC
+0xa040, //Dark BLC
+0xa844, //Normal BLC
+
+
+//Page 2  Last Update 10_03_12
+0x0302,
+0x1340, //*** ADD 100402 
+0x1404, //*** ADD 100402 
+0x1a00, //*** ADD 100402 
+0x1b08, //*** ADD 100402 
+0x2033,
+0x21aa,//*** Change 100402 
+0x22a7,
+0x2332,//*** Change 100405 
+0x3b48,//*** ADD 100405 
+0x5021, //*** ADD 100406
+0x52a2,
+0x530a,
+0x5430,//*** ADD 100405 
+0x5510,//*** Change 100402 
+0x560c,
+0x590F,//*** ADD 100405 
+
+0x60ca,
+0x61db,
+0x62ca,
+0x63da,
+0x64ca,
+0x65da,
+0x72cb,
+0x73d8,
+0x74cb,
+0x75d8,
+0x8002,
+0x81bd,
+0x8224,
+0x833e,
+0x8424,
+0x853e,
+0x9272,
+0x938c,
+0x9472,
+0x958c,
+0xa003,
+0xa1bb,
+0xa4bb,
+0xa503,
+0xa844,
+0xa96a,
+0xaa92,
+0xabb7,
+0xb8c9,
+0xb9d0,
+0xbc20,
+0xbd28,
+0xc0DE,//*** Change 100402
+0xc1EC,//*** Change 100402
+0xc2DE,//*** Change 100402
+0xc3EC,//*** Change 100402
+0xc4E0,//*** Change 100402
+0xc5EA,//*** Change 100402
+0xc6E0,//*** Change 100402
+0xc7Ea,//*** Change 100402
+0xc8e1,
+0xc9e8,
+0xcae1,
+0xcbe8,
+0xcce2,
+0xcde7,
+0xcee2,
+0xcfe7,
+0xd0c8,
+0xd1ef,
+
+
+//Page 10
+0x0310,
+0x1001, //YUV ORDER UYVY
+0x1143,
+0x1230, //Y offet, dy offseet enable
+0x4080,
+0x4105, //00 DYOFS  
+0x4880, //Contrast  
+0x5048, //AGBRT
+      
+0x6001, //7f //7c
+0x6100, //Use default
+0x6280, //SATB 
+0x6380, //SATR
+0x6448, //AGSAT
+0x6690, //wht_th2
+0x6736, //wht_gain  Dark (0.4x), Normal (0.75x)
+
+//LPF
+0x0311,
+0x1025,
+0x1106,
+0x2000,
+0x2138,
+0x230a,
+0x6004,
+0x6186,
+0x6200,
+0x6300,
+0x6400,
+
+0x67F0,
+0x6804,
+0x6904,
+
+//2D
+0x0312,
+0x40cb,
+0x4109,
+0x5018,
+0x5124,
+0x701f,
+0x7100,
+0x7200,
+0x7300,
+0x7410,
+0x7510,
+0x7620,
+0x7780,
+0x7888,
+0x7918,
+0xb07d,
+
+//Edge
+0x0313,
+0x1001,
+0x1189,
+0x1214,
+0x1319,
+0x1408,
+0x2005,
+0x2103,
+0x2330,
+0x2431,
+0x2508,
+0x2640,
+0x2700,
+0x2808,
+0x2950,
+0x2ae0,
+0x2b10,
+0x2c28,
+0x2d40,
+0x2e00,
+0x2f00,
+0x3011,
+0x8003,
+0x8107,
+0x9005,
+0x9103,
+0x9200,
+0x9320,
+0x9440,
+0x9510,
+
+0x0314,
+0x1001,
+0x20c0, //XCEN 60
+0x2180, //YCEN 80
+0x2248, //49 
+0x2338, 
+0x2432, 
+
+0x0315,
+0x1003,
+
+0x1453,	//CMCOFSGM 
+0x164a,	//CMCOFSGL
+0x172f,	//CMC SIGN
+
+//CMC
+0x30cb,
+0x3161,
+0x3216,
+0x3323,
+0x34ce,
+0x352b,
+0x3601,
+0x3734,
+0x3875,
+//CMC OFS
+0x4005,
+0x4191,
+0x420c,
+0x43bc,
+0x440a,
+0x4531,
+0x4683,
+0x4781,
+0x4805,
+
+0x0316,
+0x3000,
+0x310d,
+0x3223,
+0x3335,
+0x345d,
+0x357d,
+0x3698,
+0x37ae,
+0x38c0,
+0x39ce,
+0x3ad9,
+0x3be9,
+0x3cf2,
+0x3df8,
+0x3efd,
+
+//Page 17 AE 
+0x0317,
+0xc43c,
+0xc532,
+
+//Page 20 AE 
+0x0320,
+0x101c,
+0x1104,
+      
+0x2001,
+0x2827,
+0x29a1,
+
+0x2af0,
+0x2bf4,
+0x2c2b, 
+      
+0x30f8,
+
+0x3b22,
+0x3cde,
+
+0x3922,
+0x3ade,
+0x3b22, 
+0x3cde,
+
+0x6095, //d5, 99
+0x683c,
+0x6964,
+0x6A28,
+0x6Bc8,
+
+0x7030,//Y Target 
+
+0x7611, //Unlock bnd1
+0x7771, //Unlock bnd2 
+
+0x7811, //Yth 1
+0x791c, //Yth 2
+0x7a23, //Yth 3
+
+0x7c15, 
+0x7d22,
+
+0x8300, //EXP Normal 30.00 fps 
+0x84c3, 
+0x8550, 
+0x8600, //EXPMin 6000.00 fps
+0x87fa, 
+0x8802, //EXP Max 10.00 fps 
+0x8949, 
+0x8af0, 
+0x8B3a, //EXP100 
+0x8C98, 
+0x8D30, //EXP120 
+0x8Ed4, 
+
+0x9102,
+0x92dc,
+0x936c,
+
+0x9401, //fix_step
+0x95b7,
+0x9674,
+
+0x988C,
+0x9923,
+
+0x9c06, //EXP Limit 857.14 fps 
+0x9dd6, 
+0x9e00, //EXP Unit 
+0x9ffa, 
+
+0xb114,
+0xb280,
+0xb414,
+0xb538,
+0xb626,
+0xb720,
+0xb81d,
+0xb91b,
+0xba1a,
+0xbb19,
+0xbc19,
+0xbd18,
+
+0xc01a,
+0xc348,
+0xc448, 
+
+
+
+//Page 22 AWB
+0x0322,
+0x10e2,
+0x1126,
+0x2140,
+     
+0x3080,
+0x3180,
+0x3812,
+0x3933,
+0x40f0,
+0x4133,
+0x4233,
+0x43f3,
+0x4455,
+0x4544,
+0x4602,
+     
+0x8045,
+0x8120,
+0x8248,
+0x835a, //RMAX Default 
+0x8425, //RMIN Default 
+0x8556, //BMAX Default 
+0x8620, //BMIN Default 
+0x874e, //RMAXB Default
+0x8846, //RMINB Default
+0x8931, //BMAXB Default
+0x8a2b, //BMINB Default
+0x8b00, //OUT TH
+0x8d31,
+0x8ea2,
+
+0x8f60,
+0x905d,
+0x9159,
+0x9253,
+0x934f,
+0x9449,
+0x953e, 
+0x9636, 
+0x972b,
+0x9828,
+0x9926,
+0x9a23,
+0x9b09,
+     
+0x0322,
+0x10fb,
+
+0x0320,
+0x108c,
+
+0x01f0,
+};
+
+//Gopeace LeeSangmin Add Brightness setting value
+const unsigned short sr030pc40_brightness_m_4[] =
+{
+0x0310,
+0x40c0,
+};
+
+const unsigned short sr030pc40_brightness_m_3[] =
+{
+0x0310,
+0x40b0, //b0 -30
+};
+
+const unsigned short sr030pc40_brightness_m_2[] =
+{
+0x0310,
+0x40a0,
+};
+
+const unsigned short sr030pc40_brightness_m_1[] =
+{
+0x0310,
+0x4090, //-10
+};
+
+const unsigned short sr030pc40_brightness_0[] =
+{
+0x0310,
+0x4090, //-10
+};
+
+const unsigned short sr030pc40_brightness_p_1[] =
+{
+0x0310,
+0x4010,
+};
+
+const unsigned short sr030pc40_brightness_p_2[] =
+{
+0x0310,
+0x4020,
+};
+
+const unsigned short sr030pc40_brightness_p_3[] =
+{
+0x0310, //max test
+0x4030, //30
+};
+
+const unsigned short sr030pc40_brightness_p_4[] =
+{
+0x0310,
+0x4040,
+};
+
+
+//Effect
+const unsigned short sr030pc40_Effect_Normal[] =
+{
+	0xef00,
+	0xd300,
+	0xd400,
+	0xd501,
+	0xd6a3,
+};
+
+const unsigned short sr030pc40_Effect_Negative[] =
+{
+	0xef00,
+	0xd301,
+	0xd400,
+	0xd52c,
+	0xd681,
+};
+
+const unsigned short sr030pc40_Effect_Black_White[] =
+{
+	0xef00,
+	0xd300,
+	0xd403,
+	0xd580,
+	0xd680,
+};
+
+const unsigned short sr030pc40_Effect_Sepia[] =
+{
+	0xef00,
+	0xd300,
+	0xd403,
+	0xd560,
+	0xd68c,
+};
+
+const unsigned short sr030pc40_Effect_Aqua[] =
+{
+	0xef00,
+	0xd300,
+	0xd403,
+	0xd5dc,
+	0xd600,
+};
+
+const unsigned short sr030pc40_Effect_Green[] =
+{
+	0xef00,
+	0xd300,
+	0xd403,
+	0xd52c,
+	0xd641,
+};
+
+//Pretty Effect (Blure)
+const unsigned short sr030pc40_Pretty_Level_0[] =
+{
+0x0313, 
+0x2005, 
+0x2103, 
+0x9005, 
+0x9103, 
+0x0316,
+0x3000,
+0x310d,
+0x3222,
+0x3339,
+0x345f,
+0x357e,
+0x3697,
+0x37a8,
+0x38b9,
+0x39c6,
+0x3ad3,
+0x3be3,
+0x3cef,
+0x3df7,
+0x3eff,
+};
+
+const unsigned short sr030pc40_Pretty_Level_1[] =
+{
+0x0313, //Page 13 Edge Enhancement
+0x2003,
+0x2102,
+0x9003,
+0x9102,
+0x0316,
+0x3000,
+0x3113,
+0x3221,
+0x333b,
+0x3469,
+0x358e,
+0x36aa,
+0x37c1,
+0x38d1,
+0x39dd,
+0x3ae7,
+0x3bf3,
+0x3cfa,
+0x3dfd,
+0x3eff,
+};
+
+const unsigned short sr030pc40_Pretty_Level_2[] =
+{
+0x0313, //Page 13 Edge Enhancement
+0x2002, 
+0x2101, 
+0x9002, 
+0x9101, 
+0x0316,
+0x3000,
+0x3110,
+0x321f,
+0x333e,
+0x3475,
+0x359f,
+0x36be,
+0x37d3,
+0x38e2,
+0x39eb,
+0x3af2,
+0x3bfa,
+0x3cfd,
+0x3dff,
+0x3eff,
+};
+
+const unsigned short sr030pc40_Pretty_Level_3[] =
+{
+0x0313, //Page 13 Edge Enhancement
+0x2000, 
+0x2100, 
+0x9000,
+0x9100,
+0x0316,
+0x3000,
+0x310c,
+0x321d,
+0x3343,
+0x3489,
+0x35b9,
+0x36d7,
+0x37e8,
+0x38f2,
+0x39f8,
+0x3afb,
+0x3bfe,
+0x3cff,
+0x3dff,
+0x3eff,
+};
+
+//WhiteBalance
+const unsigned short sr030pc40_WB_Auto[] = 
+{
+0xff00,
+};
+
+const unsigned short sr030pc40_WB_Daylight[] = 
+{
+0xff00,
+};
+
+const unsigned short sr030pc40_WB_Cloudy[] = 
+{
+0xff00,
+};
+
+const unsigned short sr030pc40_WB_Fluorescent[] = 
+{
+0xff00,
+};
+
+const unsigned short sr030pc40_WB_Incandescent[] = 
+{
+0xff00,
+};
+
+const unsigned short sr030pc40_15_fps[] =
+{
+0x0300, //7
+
+0x1000,
+
+0xffaa, //170ms 
+
+0x01f1,//Sleep On
+
+0x1195,//Fixed Disable
+
+
+0x4001, //Hblank 344
+0x4158, 
+0x4200, //Vblank 20
+0x4314, 
+
+0x0320, //Page 20
+0x101c, // AE off 
+0x8300, //EXP Normal 33.33 fps 
+0x84af, 
+0x85c8, 
+0x8600, //EXPMin 6000.00 fps
+0x87fa, 
+0x8800, //EXP Max 25.00 fps 
+0x89ea, 
+0x8a60, 
+0x8B3a, //EXP100 
+0x8C98, 
+0x8D30, //EXP120 
+0x8Ed4, 
+0x9101, //EXP Fix 15.00 fps
+0x927c, 
+0x93dc, 
+0x9c06, //EXP Limit 857.14 fps 
+0x9dd6, 
+0x9e00, //EXP Unit 
+0x9ffa, 
+
+
+0x109c, // AE on
+
+
+0x0300,
+0x1000,
+0x1195, //Fixed enable
+0x01f0, //Sleep Off
+};
+
+const unsigned short sr030pc40_10_fps[] =
+{
+0xff00,
+};
+
+const unsigned short sr030pc40_7_fps[] =
+{
+0x0300, //7
+
+0x1000,
+
+0xffaa, //170ms 
+
+0x01f1,//Sleep On
+
+0x1195,//Fixed Disable
+
+
+0x4001, //Hblank 344
+0x4158, 
+0x4200, //Vblank 20
+0x4314, 
+
+0x0320, //Page 20
+0x101c, // AE off 
+0x8300, //EXP Normal 33.33 fps 
+0x84af, 
+0x85c8, 
+0x8600, //EXPMin 6000.00 fps
+0x87fa, 
+0x8800, //EXP Max 25.00 fps 
+0x89ea, 
+0x8a60, 
+0x8B3a, //EXP100 
+0x8C98, 
+0x8D30, //EXP120 
+0x8Ed4, 
+0x9103, //EXP Fix 7.00 fps
+0x923b, 
+0x9326, 
+0x9c06, //EXP Limit 857.14 fps 
+0x9dd6, 
+0x9e00, //EXP Unit 
+0x9ffa, 
+
+
+0x109c, // AE on
+
+
+0x0300,
+0x1000,
+0x1195, //Fixed enable
+0x01f0, //Sleep Off
+};
+
+const unsigned short sr030pc40_dtp_on[] = 
+{
+0xff00,
+};
+
+
+const unsigned short sr030pc40_dtp_off[] = 
+{
+0xff00,
+};
+
+
+static inline int sr030pc40_sensor_read( unsigned char subaddr, unsigned char *data);
+static inline int sr030pc40_sensor_write( unsigned char subaddr, unsigned char val);
+
+
+//Gopeace LeeSangmin DJ26 Add
+static unsigned char sr030pc40_check_sensor_rev(void);
+static int sr030pc40_cam_stdby( bool enable);
+static int sr030pc40_cam_reset( bool enable);
+
+#define SR030PC40_INIT_REGS	(sizeof(sr030pc40_init_reg) / sizeof(unsigned short))
+#define SR030PC40_VT_INIT_REGS	(sizeof(sr030pc40_VT_init_reg) / sizeof(unsigned short))
+
+//Brightness
+#define SR030PC40_BRIGHTNESS_M_4_REGS	(sizeof(sr030pc40_brightness_m_4) / sizeof(unsigned short))
+#define SR030PC40_BRIGHTNESS_M_3_REGS	(sizeof(sr030pc40_brightness_m_3) / sizeof(unsigned short))
+#define SR030PC40_BRIGHTNESS_M_2_REGS	(sizeof(sr030pc40_brightness_m_2) / sizeof(unsigned short))
+#define SR030PC40_BRIGHTNESS_M_1_REGS	(sizeof(sr030pc40_brightness_m_1) / sizeof(unsigned short))
+#define SR030PC40_BRIGHTNESS_0_REGS		(sizeof(sr030pc40_brightness_0) / sizeof(unsigned short))
+#define SR030PC40_BRIGHTNESS_P_1_REGS	(sizeof(sr030pc40_brightness_p_1) / sizeof(unsigned short))
+#define SR030PC40_BRIGHTNESS_P_2_REGS	(sizeof(sr030pc40_brightness_p_2) / sizeof(unsigned short))
+#define SR030PC40_BRIGHTNESS_P_3_REGS	(sizeof(sr030pc40_brightness_p_3) / sizeof(unsigned short))
+#define SR030PC40_BRIGHTNESS_P_4_REGS	(sizeof(sr030pc40_brightness_p_4) / sizeof(unsigned short))
+
+//VT Brightness
+#define SR030PC40_VT_BRIGHTNESS_M_3_REGS	(sizeof(sr030pc40_VT_brightness_m_3) / sizeof(unsigned short))
+#define SR030PC40_VT_BRIGHTNESS_M_2_REGS	(sizeof(sr030pc40_VT_brightness_m_2) / sizeof(unsigned short))
+#define SR030PC40_VT_BRIGHTNESS_M_1_REGS	(sizeof(sr030pc40_VT_brightness_m_1) / sizeof(unsigned short))
+#define SR030PC40_VT_BRIGHTNESS_0_REGS	(sizeof(sr030pc40_VT_brightness_0) / sizeof(unsigned short))
+#define SR030PC40_VT_BRIGHTNESS_P_1_REGS	(sizeof(sr030pc40_VT_brightness_p_1) / sizeof(unsigned short))
+#define SR030PC40_VT_BRIGHTNESS_P_2_REGS	(sizeof(sr030pc40_VT_brightness_p_2) / sizeof(unsigned short))
+#define SR030PC40_VT_BRIGHTNESS_P_3_REGS	(sizeof(sr030pc40_VT_brightness_p_3) / sizeof(unsigned short))
+
+//Effect
+#define SR030PC40_EFFECT_NORMAL_REGS	(sizeof(sr030pc40_Effect_Normal) / sizeof(unsigned short))
+#define SR030PC40_EFFECT_NEGATIVE_REGS	(sizeof(sr030pc40_Effect_Negative) / sizeof(unsigned short))
+#define SR030PC40_EFFECT_BLACK_WHITE_REGS	(sizeof(sr030pc40_Effect_Black_White) / sizeof(unsigned short))
+#define SR030PC40_EFFECT_SEPIA_REGS	(sizeof(sr030pc40_Effect_Sepia) / sizeof(unsigned short))
+#define SR030PC40_EFFECT_GREEN_REGS	(sizeof(sr030pc40_Effect_Green) / sizeof(unsigned short))
+#define SR030PC40_EFFECT_AQUA_REGS	(sizeof(sr030pc40_Effect_Aqua) / sizeof(unsigned short))
+
+//Pretty Effect
+#define SR030PC40_PRETTY_LEVEL_0_REGS (sizeof(sr030pc40_Pretty_Level_0) / sizeof(unsigned short))
+#define SR030PC40_PRETTY_LEVEL_1_REGS (sizeof(sr030pc40_Pretty_Level_1) / sizeof(unsigned short))
+#define SR030PC40_PRETTY_LEVEL_2_REGS (sizeof(sr030pc40_Pretty_Level_2) / sizeof(unsigned short))
+#define SR030PC40_PRETTY_LEVEL_3_REGS (sizeof(sr030pc40_Pretty_Level_3) / sizeof(unsigned short))
+
+//White Balance
+#define SR030PC40_WB_AUTO_REGS			(sizeof(sr030pc40_WB_Auto) / sizeof(unsigned short))
+#define SR030PC40_WB_DAYLIGHT_REGS			(sizeof(sr030pc40_WB_Daylight) / sizeof(unsigned short))
+#define SR030PC40_WB_CLOUDY_REGS			(sizeof(sr030pc40_WB_Cloudy) / sizeof(unsigned short))
+#define SR030PC40_WB_FLUORESCENT_REGS	(sizeof(sr030pc40_WB_Fluorescent) / sizeof(unsigned short))
+#define SR030PC40_WB_INCANDESCENT_REGS	(sizeof(sr030pc40_WB_Incandescent) / sizeof(unsigned short))
+
+//Frame Rate
+#define SR030PC40_15_FPS_REGS			(sizeof(sr030pc40_15_fps) / sizeof(unsigned short))
+#define SR030PC40_10_FPS_REGS			(sizeof(sr030pc40_10_fps) / sizeof(unsigned short))
+#define SR030PC40_7_FPS_REGS			(sizeof(sr030pc40_7_fps) / sizeof(unsigned short))
+
+//DTP
+#define SR030PC40_DTP_ON_REGS		( sizeof( sr030pc40_dtp_on) / sizeof( unsigned short))
+#define SR030PC40_DTP_OFF_REGS		( sizeof( sr030pc40_dtp_off) / sizeof( unsigned short))
+#endif /* __SR030PC40_H__ */
